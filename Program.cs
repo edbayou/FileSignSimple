@@ -84,7 +84,7 @@ class FileToSign
         for (int i = 0; i < _threadsCount; i++)
         {
             Thread myThread = new Thread(new ThreadStart(DoSign));
-            myThread.Name = "Поток " + i.ToString();
+            myThread.Name = "Thread " + i.ToString();
             myThread.Start();
         }
     }
