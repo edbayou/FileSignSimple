@@ -1,111 +1,132 @@
 using System.Security.Cryptography;
- 
-namespace FileSignSimple
+
+
+class Program
 {
-    class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
+        string fileName; 
+        int blockSize;
+        GetFileNameAndBlockSize(out fileName, out blockSize);
+        FileToSign s = new FileToSign(fileName, blockSize);
+
+    }
+    static void GetFileNameAndBlockSize(out string fileName, out int blockSize)
+		{
+			GetParam:
+			fileName = "";
+			blockSize = 0;
+			Console.WriteLine("Enter file:");
+			string _fileName = Console.ReadLine();
+			Console.WriteLine("Enter block size:");
+			string _blockSize = Console.ReadLine();
+			try{
+				if(File.Exists(_fileName)){
+					fileName = _fileName;
+				}
+				else {
+					throw new ArgumentException("File is not exist");
+				}
+				
+				if(int.TryParse(_blockSize,out int newBlockSize)) {
+					if (newBlockSize <= 0){
+						throw new ArgumentException("Block Size should be more then 0");
+					}
+					blockSize = newBlockSize;
+				}
+				else{
+					throw new ArgumentException("Block Size should be number");
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex.Message);
+				goto GetParam;
+			}
+		}
+
+}
+
+class FileToSign
+{
+    int _bufferSize;
+    string _filePath;
+    long _fileLength;
+    long _blocknumber;
+    object _toLock = new object();
+
+    protected struct Block
+    {
+        public long Number;
+        public byte[] Data;
+
+        public Block(long number, byte[] data)
         {
-            FileToSign s = new FileToSign("C:/123.pdf", 100000);
+            Number = number;
+            Data = data;
         }
     }
- 
-    class FileToSign
+
+    public FileToSign(string filePath, int bufferSize)
     {
-        int _bufferSize;
-        string _filePath;
-        long _fileLength;
-        long _blocknumber;
-        object _toLock = new object();
- 
-        protected struct block
+        _filePath = filePath;
+        _bufferSize = bufferSize;
+
+        FileInfo file = new FileInfo(filePath);
+        _fileLength = file.Length;
+
+        int _threadsCount = Environment.ProcessorCount; ;
+
+        for (int i = 0; i < _threadsCount; i++)
         {
-            public long Number;
-            public byte[] Data;
- 
-            public block(long number, byte[] data)
-            {
-                Number = number;
-                Data = data;
-            }
+            Thread myThread = new Thread(new ThreadStart(DoSign));
+            myThread.Name = "Поток " + i.ToString();
+            myThread.Start();
         }
- 
-        public FileToSign(string filePath, int bufferSize)
+    }
+
+    private void DoSign()
+    {
+        while (true)
         {
-            _filePath = filePath;
-            _bufferSize = bufferSize;
- 
-            FileInfo file = new FileInfo(filePath);
-            _fileLength = file.Length;
- 
-            int _threadsCount = Environment.ProcessorCount; ;
- 
-            for (int i = 0; i < _threadsCount; i++)
-            {
-                new Thread(new ThreadStart(DoSign)).Start();
-            }
- 
-            Console.ReadKey();
+            Block dataBlock = GetData();
+
+            if (dataBlock.Number < 0)
+                return;
+
+            SHA256 sha = SHA256.Create();
+
+            byte[] hash = sha.ComputeHash(dataBlock.Data);
+            string hashToString = Convert.ToBase64String(
+               hash);
+            Console.WriteLine(Thread.CurrentThread.Name + ": " + dataBlock.Number + " - " + hashToString);
         }
- 
-        private void DoSign()
+    }
+    protected Block GetData()
+    {
+        lock (_toLock)
         {
-            while (true)
-            {
-                block dataBlock = GetData();
- 
-                if (dataBlock.Number < 0)
-                    return;
- 
-                SHA256 sha = SHA256.Create();
- 
-                byte[] hash = sha.ComputeHash(dataBlock.Data);
- 
-                Console.Clear();
-                Console.Write(dataBlock.Number + " - ");
-                PrintByteArray(hash);
-            }
-        }
- 
-        public static void PrintByteArray(byte[] array)
-        {
-            int i;
-            for (i = 0; i < array.Length; i++)
-            {
-                Console.Write(String.Format("{0:X2}", array[i]));
-                if ((i % 4) == 3) Console.Write(" ");
-            }
-            Console.WriteLine("Dune");
-        }
- 
-        protected block GetData()
-        {
-            block temp = new block(-1, new byte[_bufferSize]);
+            Block block = new Block(-1, new byte[_bufferSize]);
             long position = _blocknumber * _bufferSize;
- 
-            lock (_toLock)
+            using (BinaryReader br = new BinaryReader(File.Open(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
             {
-                using (BinaryReader br = new BinaryReader(File.Open(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
+                if (position > _fileLength)
+                    return block;
+
+                try
                 {
-                    if (position > _fileLength)
-                        return temp;
- 
-                    try
-                    {
-                        br.BaseStream.Position = position;
-                        br.Read(temp.Data, 0, _bufferSize);
-                        temp.Number = _blocknumber;
-                        _blocknumber++;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message + "\n" + ex.StackTrace);
-                    }
+                    br.BaseStream.Position = position;
+                    br.Read(block.Data, 0, _bufferSize);
+                    block.Number = _blocknumber;
+                    _blocknumber++;
                 }
- 
-                return temp;
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message + "\n" + ex.StackTrace);
+                }
             }
+
+            return block;
         }
     }
 }
-
