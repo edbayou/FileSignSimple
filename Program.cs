@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 
-
 class Program
 {
     static void Main(string[] args)
@@ -50,7 +49,6 @@ class Program
             goto GetParam;
         }
     }
-
 }
 
 class FileToSign
@@ -103,8 +101,7 @@ class FileToSign
             SHA256 sha = SHA256.Create();
 
             byte[] hash = sha.ComputeHash(dataBlock.Data);
-            string hashToString = Convert.ToBase64String(
-               hash);
+            string hashToString = Convert.ToBase64String(hash);
             Console.WriteLine(Thread.CurrentThread.Name + ": " + dataBlock.Number + " - " + hashToString);
         }
     }
@@ -118,7 +115,6 @@ class FileToSign
             {
                 if (position > _fileLength)
                     return block;
-
                 try
                 {
                     br.BaseStream.Position = position;
@@ -131,7 +127,6 @@ class FileToSign
                     Console.WriteLine(ex.Message + "\n" + ex.StackTrace);
                 }
             }
-
             return block;
         }
     }
