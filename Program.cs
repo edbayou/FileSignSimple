@@ -5,45 +5,51 @@ class Program
 {
     static void Main(string[] args)
     {
-        string fileName; 
+        string fileName;
         int blockSize;
         GetFileNameAndBlockSize(out fileName, out blockSize);
         FileToSign s = new FileToSign(fileName, blockSize);
 
     }
     static void GetFileNameAndBlockSize(out string fileName, out int blockSize)
-		{
-			GetParam:
-			fileName = "";
-			blockSize = 0;
-			Console.WriteLine("Enter file:");
-			string _fileName = Console.ReadLine();
-			Console.WriteLine("Enter block size:");
-			string _blockSize = Console.ReadLine();
-			try{
-				if(File.Exists(_fileName)){
-					fileName = _fileName;
-				}
-				else {
-					throw new ArgumentException("File is not exist");
-				}
-				
-				if(int.TryParse(_blockSize,out int newBlockSize)) {
-					if (newBlockSize <= 0){
-						throw new ArgumentException("Block Size should be more then 0");
-					}
-					blockSize = newBlockSize;
-				}
-				else{
-					throw new ArgumentException("Block Size should be number");
-				}
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine(ex.Message);
-				goto GetParam;
-			}
-		}
+    {
+    GetParam:
+        fileName = "";
+        blockSize = 0;
+        Console.WriteLine("Enter file:");
+        string _fileName = Console.ReadLine();
+        Console.WriteLine("Enter block size:");
+        string _blockSize = Console.ReadLine();
+        try
+        {
+            if (File.Exists(_fileName))
+            {
+                fileName = _fileName;
+            }
+            else
+            {
+                throw new ArgumentException("File is not exist");
+            }
+
+            if (int.TryParse(_blockSize, out int newBlockSize))
+            {
+                if (newBlockSize <= 0)
+                {
+                    throw new ArgumentException("Block Size should be more then 0");
+                }
+                blockSize = newBlockSize;
+            }
+            else
+            {
+                throw new ArgumentException("Block Size should be number");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            goto GetParam;
+        }
+    }
 
 }
 
